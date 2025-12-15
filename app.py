@@ -2,52 +2,23 @@ import streamlit as st
 import random
 import time
 
-# ---------------- PAGE SETUP ----------------
-st.set_page_config(
-    page_title="EcoTree Exhibition",
-    page_icon="🌱",
-    layout="centered"
-)
+# ---------- PAGE ----------
+st.set_page_config(page_title="EcoTree Exhibition", page_icon="🌱")
 
-# ---------------- STYLING ----------------
+# ---------- STYLE ----------
 st.markdown("""
 <style>
-body {
-    background: linear-gradient(135deg, #081c15, #1b4332);
-}
-.title {
-    font-size: 46px;
-    font-weight: 900;
-    color: #d8f3dc;
-    text-align: center;
-}
-.subtitle {
-    color: #b7e4c7;
-    text-align: center;
-}
-.card {
-    background: #ffffff12;
-    padding: 28px;
-    border-radius: 28px;
-    margin-top: 25px;
-}
-.center {
-    text-align: center;
-}
-.timer {
-    font-size: 28px;
-    font-weight: bold;
-    color: #ffdd57;
-    text-align: center;
-}
+body { background: linear-gradient(135deg,#081c15,#1b4332); }
+.card { background:#ffffff12; padding:30px; border-radius:30px; margin-top:30px; }
+.title { font-size:48px; font-weight:900; color:#d8f3dc; text-align:center; }
+.center { text-align:center; }
+.timer { font-size:32px; color:#ffdd57; font-weight:bold; }
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- TITLE ----------------
 st.markdown("<div class='title'>EcoTree</div>", unsafe_allow_html=True)
-st.markdown("<div class='subtitle'>Scan • See • Decide</div>", unsafe_allow_html=True)
 
-# ---------------- PRODUCTS ----------------
+# ---------- DATA ----------
 PRODUCTS = {
     "plastic_bottle": ("Plastic Water Bottle", 25, ["Steel bottle", "Glass bottle"]),
     "plastic_bag": ("Plastic Bag", 10, ["Cloth bag", "Jute bag"]),
@@ -55,130 +26,100 @@ PRODUCTS = {
     "chips_packet": ("Chips Packet", 30, ["Bulk snacks", "Homemade snacks"]),
 }
 
-# ---------------- QUIZ QUESTIONS (50 READY) ----------------
-QUIZ_QUESTIONS = [
-    ("Plastic decomposes in?", ["10 years", "50 years", "450 years"], "450 years"),
-    ("Best alternative to plastic?", ["Glass", "PVC", "Styrofoam"], "Glass"),
-    ("Which uses more water?", ["Cotton", "Polyester", "Nylon"], "Cotton"),
-    ("Fast fashion is harmful because?", ["Low cost", "High waste", "Bright colors"], "High waste"),
-    ("Which is renewable?", ["Coal", "Solar", "Diesel"], "Solar"),
-] * 10  # makes ~50 questions
+QUESTIONS = [
+    ("Plastic decomposes in?", ["10 years","50 years","450 years"], "450 years"),
+    ("Best eco choice?", ["Reusable","Single-use","Extra packaging"], "Reusable"),
+    ("Which pollutes most?", ["Plastic","Paper","Glass"], "Plastic"),
+    ("Fast fashion causes?", ["Low cost","High waste","Trendy clothes"], "High waste"),
+    ("Renewable energy?", ["Coal","Solar","Diesel"], "Solar"),
+] * 10   # ~50 questions
 
-# ---------------- SESSION STATE ----------------
+# ---------- STATE ----------
 if "screen" not in st.session_state:
-    st.session_state.screen = 1
+    st.session_state.screen = 0
 
-if "quiz_questions" not in st.session_state:
-    st.session_state.quiz_questions = random.sample(QUIZ_QUESTIONS, 5)
-    st.session_state.q_index = 0
+if "quiz_set" not in st.session_state:
+    st.session_state.quiz_set = random.sample(QUESTIONS, 5)
+    st.session_state.qn = 0
     st.session_state.score = 0
+    st.session_state.start_time = time.time()
 
-# ---------------- READ QR PARAM ----------------
+# ---------- QR PARAM ----------
 params = st.experimental_get_query_params()
-product_id = params.get("product", [None])[0]
+pid = params.get("product", [None])[0]
 
-# ---------------- SCREEN 1: WAITING ----------------
-if st.session_state.screen == 1:
-    st.markdown("<div class='card center'>", unsafe_allow_html=True)
-    st.write("📷 Scan a product QR code to begin")
-    st.write("The EcoTree will respond instantly.")
-    st.markdown("</div>", unsafe_allow_html=True)
+# ---------- SCREEN 0 : WAIT ----------
+if st.session_state.screen == 0:
+    st.markdown("<div class='card center'>📷 Scan a product QR code</div>", unsafe_allow_html=True)
+    if pid in PRODUCTS:
+        st.session_state.product = PRODUCTS[pid]
+        st.session_state.screen = 1
+        st.experimental_rerun()
 
-    if product_id in PRODUCTS:
+# ---------- SCREEN 1 : RESULT ----------
+elif st.session_state.screen == 1:
+    name, eco, alts = st.session_state.product
+
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    st.subheader(name)
+    st.progress(eco)
+
+    if eco < 30: st.write("🌱 A fragile sapling")
+    elif eco < 60: st.write("🌿 Growing tree")
+    else: st.write("🌳 Thriving ecosystem")
+
+    st.subheader("Better alternatives")
+    for a in alts: st.write("✅", a)
+
+    if st.button("Next"):
         st.session_state.screen = 2
         st.experimental_rerun()
 
-# ---------------- SCREEN 2: PRODUCT ----------------
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# ---------- SCREEN 2 : QUIZ DECISION ----------
 elif st.session_state.screen == 2:
-    name, score, alts = PRODUCTS[product_id]
-
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.subheader("📦 Product Selected")
-    st.write(name)
-
-    st.subheader("🌍 Eco Score")
-    st.progress(score)
-
-    st.session_state.tree_score = score
-    st.session_state.alts = alts
-
-    if st.button("Next ▶"):
+    st.markdown("<div class='card center'>", unsafe_allow_html=True)
+    st.write("Do you want to try the Rapid Fire Quiz?")
+    if st.button("Yes ⚡"):
+        st.session_state.start_time = time.time()
         st.session_state.screen = 3
         st.experimental_rerun()
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-# ---------------- SCREEN 3: TREE + RECOMMENDATIONS ----------------
-elif st.session_state.screen == 3:
-    score = st.session_state.tree_score
-
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.subheader("🌳 EcoTree Growth")
-
-    if score < 30:
-        st.write("🌱 A fragile sapling")
-    elif score < 60:
-        st.write("🌿 A growing tree")
-    else:
-        st.write("🌳 A thriving ecosystem")
-
-    st.subheader("🔁 Better Choices")
-    for a in st.session_state.alts:
-        st.write(f"✅ {a}")
-
-    if st.button("Continue ▶"):
-        st.session_state.screen = 4
-        st.experimental_rerun()
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-# ---------------- SCREEN 4: QUIZ CHOICE ----------------
-elif st.session_state.screen == 4:
-    st.markdown("<div class='card center'>", unsafe_allow_html=True)
-    choice = st.radio(
-        "Would you like to try the Rapid Fire Eco Quiz?",
-        ["No, skip", "Yes, start ⚡"]
-    )
-
-    if choice == "Yes, start ⚡":
+    if st.button("No"):
         st.session_state.screen = 5
         st.experimental_rerun()
-
-    if choice == "No, skip":
-        st.session_state.screen = 6
-        st.experimental_rerun()
-
     st.markdown("</div>", unsafe_allow_html=True)
 
-# ---------------- SCREEN 5: QUIZ ----------------
-elif st.session_state.screen == 5:
-    q, options, answer = st.session_state.quiz_questions[st.session_state.q_index]
+# ---------- SCREEN 3 : QUIZ ----------
+elif st.session_state.screen == 3:
+    q, opts, ans = st.session_state.quiz_set[st.session_state.qn]
+
+    elapsed = int(time.time() - st.session_state.start_time)
+    remaining = 10 - elapsed
 
     st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.subheader(f"⚡ Question {st.session_state.q_index + 1} / 5")
+    st.subheader(f"Question {st.session_state.qn+1} / 5")
+    st.markdown(f"<div class='timer'>⏱ {max(0,remaining)} sec</div>", unsafe_allow_html=True)
 
-    start = time.time()
-    choice = st.radio(q, options)
+    choice = st.radio(q, opts, key=st.session_state.qn)
 
-    remaining = 10 - int(time.time() - start)
-    st.markdown(f"<div class='timer'>⏱ {max(0, remaining)} sec</div>", unsafe_allow_html=True)
-
-    if st.button("Submit"):
-        if choice == answer:
+    if remaining <= 0 or st.button("Submit"):
+        if choice == ans:
             st.session_state.score += 1
 
-        st.session_state.q_index += 1
+        st.session_state.qn += 1
+        st.session_state.start_time = time.time()
 
-        if st.session_state.q_index == 5:
-            st.session_state.screen = 6
+        if st.session_state.qn == 5:
+            st.session_state.screen = 5
         st.experimental_rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-# ---------------- SCREEN 6: OUTRO ----------------
-elif st.session_state.screen == 6:
+# ---------- SCREEN 5 : OUTRO ----------
+elif st.session_state.screen == 5:
     st.markdown("<div class='card center'>", unsafe_allow_html=True)
     st.write("🌍 Thank you for exploring EcoTree")
     st.write(f"🔥 Quiz Score: {st.session_state.score} / 5")
-    st.write("Every choice shapes the future.")
+    st.write("Every choice matters.")
     st.markdown("</div>", unsafe_allow_html=True)
